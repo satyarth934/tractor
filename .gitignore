@@ -15,6 +15,8 @@ tractor/mix.py
 tractor/mix_wrap.c
 tractor/mp_fourier.py
 tractor/mp_fourier_wrap.c
+tractor/gitversion.py
+tractor/version.py
 doc/_build/
 html/
 astrometry
@@ -22,3 +24,5 @@ astrometry
 *.aux
 *.dvi
 headers/
+
+tractor-git/build

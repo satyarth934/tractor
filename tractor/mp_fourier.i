@@ -7,7 +7,8 @@
 #include <numpy/arrayobject.h>
 #include <math.h>
 #include <assert.h>
-
+#include <time.h>
+#include <cuda_runtime.h>
 %}
 
 %include "numpy.i"
@@ -435,6 +436,11 @@ static void gaussian_fourier_transform_zero_mean(
     double * restrict w, int w_len,
     double * restrict out, int out_dim1, int out_dim2)
 {
+    printf("[SAPLOGS] Inside mp_fourier.i => ENTERING the original static void gaussian_fourier_transform_zero_mean() function.\n");
+
+    // Start the clock
+    clock_t start = clock();
+
     const double negtwopisquare = -2. * M_PI * M_PI;
 
     int K = amps_len;
@@ -474,8 +480,112 @@ static void gaussian_fourier_transform_zero_mean(
             out[index] = sum;
         }
     }
+
+    // Stop the clock
+    clock_t end = clock();
+
+    // Calculate the elapsed time in seconds
+    double elapsed_time = (double)(end - start) / CLOCKS_PER_SEC;
+
+    printf("[SAPLOGS] Inside mp_fourier.i => static void gaussian_fourier_transform_zero_mean() => exec time: %.8f seconds\n", elapsed_time);
     return;
 }
+
+
+
+// // GPU Version
+// __global__ void gaussian_fourier_transform_zero_mean_cuda(
+//     double *amps, int amps_len,
+//     double *vars, int vars_dim1, int vars_dim2, int vars_dim3,
+//     double *v, int v_len,
+//     double *w, int w_len,
+//     double *out, int out_dim1, int out_dim2)
+// {
+//     const double negtwopisquare = -2. * M_PI * M_PI;
+
+//     int K = amps_len;
+//     int NV = v_len;
+//     int NW = w_len;
+
+//     int j = blockIdx.x * blockDim.x + threadIdx.x;
+//     int i = blockIdx.y * blockDim.y + threadIdx.y;
+
+//     if (j < NW && i < NV) {
+//         double w_j = w[j];
+//         double w_j_sqr = w_j * w_j;
+//         int index = NV * j + i;
+//         double v_i = v[i];
+//         double v_i_sqr = v_i * v_i;
+//         double sum = 0.0;
+//         for (int k = 0; k < K; k++) {
+//             int offset = k * 4;
+//             double a = vars[offset];
+//             double b = vars[offset + 1];
+//             double d = vars[offset + 3];
+
+//             // Special case delta function
+//             if ((a == 0.0) && (b == 0.0) && (d == 0.0)) {
+//                 sum += amps[k];
+//                 continue;
+//             }
+
+//             sum += amps[k] * exp(negtwopisquare *
+//                                 (a *  v_i_sqr + 2. * b * v_i * w_j + d * w_j_sqr));
+//         }
+//         out[index] = sum;
+//     }
+// }
+
+// void gaussian_fourier_transform_zero_mean(
+//     double *amps, int amps_len,
+//     double *vars, int vars_dim1, int vars_dim2, int vars_dim3,
+//     double *v, int v_len,
+//     double *w, int w_len,
+//     double *out, int out_dim1, int out_dim2)
+// {
+
+//     printf("[SAPLOGS] ENTERING gaussian_fourier_transform_zero_mean() CUDA function");
+
+//     const int threads_per_block = 256;
+//     int NW = w_len;
+//     int NV = v_len;
+//     dim3 grid_size(
+//         (NW + threads_per_block - 1) / threads_per_block, 
+//         (NV + threads_per_block - 1) / threads_per_block,
+//     );
+
+//     double *d_amps, *d_vars, *d_v, *d_w, *d_out;
+
+//     cudaMalloc((void **)&d_amps, amps_len * sizeof(double));
+//         cudaMalloc((void **)&d_vars, vars_dim1 * vars_dim2 * vars_dim3 * sizeof(double));
+//     cudaMalloc((void **)&d_v, v_len * sizeof(double));
+//     cudaMalloc((void **)&d_w, w_len * sizeof(double));
+//     cudaMalloc((void **)&d_out, out_dim1 * out_dim2 * sizeof(double));
+
+//     cudaMemcpy(d_amps, amps, amps_len * sizeof(double), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_vars, vars, vars_dim1 * vars_dim2 * vars_dim3 * sizeof(double), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_v, v, v_len * sizeof(double), cudaMemcpyHostToDevice);
+//     cudaMemcpy(d_w, w, w_len * sizeof(double), cudaMemcpyHostToDevice);
+
+//     gaussian_fourier_transform_zero_mean_cuda<<<grid_size, threads_per_block>>>(
+//         d_amps, amps_len,
+//         d_vars, vars_dim1, vars_dim2, vars_dim3,
+//         d_v, v_len,
+//         d_w, w_len,
+//         d_out, out_dim1, out_dim2);
+
+//     cudaMemcpy(out, d_out, out_dim1 * out_dim2 * sizeof(double), cudaMemcpyDeviceToHost);
+
+//     cudaFree(d_amps);
+//     cudaFree(d_vars);
+//     cudaFree(d_v);
+//     cudaFree(d_w);
+//     cudaFree(d_out);
+
+//     printf("[SAPLOGS] EXITING gaussian_fourier_transform_zero_mean() CUDA function");
+// }
+
+
 
 
 %}

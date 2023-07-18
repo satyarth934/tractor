@@ -8,7 +8,7 @@ from .psfex import *
 from .ellipses import *
 from .imageutils import *
 from .galaxy import *
-from .version import *
+from .version import *    # version.py is generated during setup/installation. Check setup.py
 
 try:
     __version__ = version
